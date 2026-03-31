@@ -1,0 +1,413 @@
+---
+title: "econometric"
+author: "Adam George"
+toc: true
+eval: false
+echo: false
+output: false
+format: html
+page-layout: full
+editor: visual
+theme: cerulean
+code-fold: true
+code-tools: true
+code-link: true
+---
+
+# Preliminary variables
+
+## Dummy variable
+
+```{r}
+
+dummy2009 <- rep(0, L)
+dummy2009[86] <- 1
+
+dummycovid <- rep(0, L)
+dummycovid[134] <- 1
+
+dummyq1<- rep(c(1,0,0,0), length.out = (L))
+dummyq2<- rep(c(0,1,0,0), length.out = (L))
+dummyq3<- rep(c(0,0,1,0), length.out = (L))
+dummyq4<- rep(c(0,0,0,1), length.out = (L))
+
+
+dummy <- data.frame(
+  dummy2009 = dummy2009[1:(L)],
+  dummycovid = dummycovid[1:(L)]
+)
+```
+
+## Functions
+
+```{r}
+setwd(dirname(rstudioapi::getSourceEditorContext()$path)) 
+source("estimate.R")
+source("econometrics_table.R")
+
+
+```
+
+# Econometric
+
+## Production
+
+### Labour Productivity
+
+```{r}
+#NOT USED
+
+df <- data.frame(
+LogPROD = diff((log(lambda[(1):(L)]))) ,
+LogGDPR = diff((log(GDP_R[1:L]))),
+lKE = diff((log(GCF_R[1:L]-GCF_HHR[1:L])))
+)
+
+dummy <- data.frame(
+  dummy2009 = dummy2009[1:(L)],
+  dummycovid = dummycovid[1:(L)]
+)
+
+estimate(df,dummy,50,136)
+
+
+```
+
+### Wage rate - share per worker
+
+```{r}
+df <- data.frame(
+WAGESHARE = (W_S[1:L]),
+Unemprate = (ru[1:L])
+)
+
+dummy <- data.frame(
+  dummycovid = dummy2009[1:(L)]
+)
+
+
+result <- estimate(df,dummy,44,136)
+
+
+
+econometrics_table(result,end_period = "2022Q4")
+
+
+
+
+result <- glm(df$WAGESHARE ~  df$Unemprate,
+    family = quasi(link = "logit", variance = "mu(1-mu)"),data=df)
+
+summary(result)
+
+
+
+```
+
+### Wage rate adjustment
+
+```{r}
+df <- data.frame(
+WAGESHARE = (WR[1:L]),
+Unemprate = (W_S[1:L]*(GDP[1:L]/EMP[1:L]))
+)
+
+dummy <- data.frame(
+  dummycovid = dummycovid[1:(L)]
+)
+
+
+result <- estimate(df,dummy,4,140)
+
+
+
+econometrics_table(result,end_period = "2022Q4")
+
+
+
+```
+
+### Domestic Prices
+
+```{r}
+#NOT CURRENTLY USED
+
+df <- data.frame(
+  lp = log(P_P[1:L]),
+  lcost = log(UC[1:(L)])
+)
+
+dummy <- data.frame(
+  dummy2009 = dummy2009[1:(L)]
+)
+
+
+
+estimate(df,dummy,44,144)
+
+
+
+```
+
+### Markups
+
+```{r}
+#NOT CURRENTLY USED
+
+df <- data.frame(
+  lMU = (MU[1:L]),
+  lu = (GDP[1:(L)]/K_P[1:L])
+)
+
+dummy <- data.frame(
+  dummy2009 = dummy2009[1:(L)]
+)
+
+
+
+estimate(df,dummy,44,136)
+
+
+```
+
+### House Prices
+
+```{r}
+
+
+df <- data.frame(
+  LogPriceHouse_POP = log((P_H[1:L]*H[1:L])/POP[1:L]),
+  LogYDHH_POP = log(YD_HH[1:(L)]/POP[1:L])#,
+  #lIBLHH = log(IBL_HH[1:(L)]/POP[1:L])
+)
+
+dummy <- data.frame(
+  dummycovid = dummycovid[1:(L)]
+)
+
+
+result <- estimate(df,dummy,88,144)
+
+econometrics_table(result,end_period = "2022Q4")
+
+
+```
+
+## Rates of Return
+
+### Bank Rate
+
+### NFC Loans
+
+```{r}
+
+
+df <- data.frame(
+  lr = log(r_IBLHH[1:L]-r_BOEQ[1:L]),
+  lrbow = log(r_BOEQ[1:L])
+)
+
+estimate(df,dummy,5,144)
+
+```
+
+## Households
+
+### Consumption
+
+```{r}
+
+df <- data.frame(
+  LogCONSHH = log(c(CONS_HH[1:42]*(CONS_HHP[43]/CONS_HH[43]),CONS_HHP[43:L])),
+  LogYDHH = log(YD_HH[1:(L)]),
+  LogFNWHH = log(FA_HH[1:(L)])
+)
+
+dummy <- data.frame(
+  dummy2009 = dummy2009[1:(L)],
+  dummycovid = dummycovid[1:(L)]
+)
+
+result <- estimate(df,dummy,8,144)
+
+econometrics_table(result,end_period = "2022Q4")
+
+```
+
+### Gross Capital Formation - New Builds
+
+```{r}
+df <- data.frame(
+  LogGCFHH = log(GCF_HHNB[1:L]),
+  LogHVAL = (log(HVAL[1:L]))
+)
+
+dummy <- data.frame(
+  dummycovid = dummycovid[1:(L)]
+)
+
+result <- estimate(df,dummy,88,144)
+
+econometrics_table(result,end_period = "2022Q4")
+
+```
+
+## Non Financial Corporations
+
+### Gross Capital Formation NFC
+
+```{r}
+
+
+df <- data.frame(
+  GCFNFC = ((GCF_NFCD[2:L])/K_NFC[1:(L-1)]),
+  Util = (u_NFC_W[2:L])
+)
+  dummy <- data.frame(
+  dummycovid = dummycovid[2:(L)]
+) 
+
+result <<- estimate(df,dummy,34,143)
+
+econometrics_table(result,end_period = "2022Q4")
+
+```
+
+### Gross Capital Formation NFC ENERGY
+
+```{r}
+
+df <- data.frame(
+  lGCF = GCF_PSFF[1:L],
+  elec = (E_ELECFF[1:L]/(K_PSFFR[1:L]*CF_FF))
+)
+
+estimate(df,dummy,50,L)
+```
+
+### Credit Conditions NFC
+
+```{r}
+
+df <- data.frame(
+CR_NFC = (CR_NFC[85:L]) ,
+DSR_NFC = (DSR_NFC[84:(L-1)]),
+FLMFI_FAMFI = FL_MFI[84:(L-1)]/FA_MFI[84:(L-1)]
+)
+
+result <- glm(df$CR_NFC ~  df$DSR_NFC + df$FLMFI_FAMFI,
+    family = quasi(link = "logit", variance = "mu(1-mu)"),data=df)
+
+summary(result)
+
+```
+
+### DEF NFC
+
+```{r}
+df <- data.frame(
+DEF_NFC = DEF_NFC[42:L],
+ILLIQ_NFC = ILLIQ_NFC[41:(L-1)]
+)
+
+result <- glm(df$DEF_NFC ~  df$ILLIQ_NFC,
+    family = quasi(link = "logit", variance = "mu(1-mu)"),data=df)
+
+summary(result)
+```
+
+## MFIs
+
+```{r}
+
+```
+
+## NMFIs
+
+### Pension Income
+
+```{r}
+
+df <- data.frame(
+  PENSR = (PENSR[1:L]/PENS[1:L]),
+  YDNMFI = (YD_NMFI[1:(L)]/PENS[1:L])
+)
+
+result <- estimate(df,dummy,50,144)
+
+econometrics_table(result,end_period = "2022Q4")
+
+```
+
+## 
+
+### Pension Income
+
+```{r}
+df <- data.frame(
+  lINSSR = (INSR[1:L]/INS[1:L]),
+  lYD_NMFI = (YD_NMFI[1:(L)]/INS[1:L])
+)
+
+result <- estimate(df,dummy,5,144)
+
+econometrics_table(result,end_period = "2022Q4")
+```
+
+## Government
+
+```{r}
+
+df <- data.frame(
+  SOCBGVT_GDP = (SOCB_GVT[1:L]/GDP[1:L]),
+  UnempRate = (ru[1:(L)])
+)
+
+result <- estimate(df,dummy,80,144)
+
+
+
+econometrics_table(result,end_period = "2022Q4")
+
+
+```
+
+## RoWs
+
+### Imports
+
+```{r}
+df <- data.frame(
+LogIMP_FE = log(IMP[1:L]),
+LogDY = log(DY[1:L]),
+LogGCF = log(GCF[1:L]/DY[1:L]),
+LogP_PI = log(P_I[1:L]/P_P[1:L])
+)
+
+
+dummy <- data.frame(
+  dummy2009 = dummy2009[1:(L)]
+)
+
+result <<- estimate(df,dummy,44,132)
+
+
+econometrics_table(result,end_period = "2022Q4")
+```
+
+### Exports
+
+```{r}
+df <- data.frame(
+LogEXP_FE = log(EXP[1:L]),
+LogRoW_D = log(RoW_D[1:L]*P_F[1:L]),
+LogREER = log(P_E[1:L]/(ER[1:L]*P_F[1:L]))
+)
+
+dummy <- data.frame(
+  dummy2009 = dummy2009[1:(L)]
+)
+
+result <<- estimate(df,dummy,44,132)
+
+```
